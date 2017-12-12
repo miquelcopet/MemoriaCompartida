@@ -1,0 +1,12 @@
+# depslib dependency file v1.0
+1513027136 source:/home/osboxes/Desktop/MemoriaCompartida/Client/mainC.cpp
+	<stdio.h>
+	<sys/types.h>
+	<iostream>
+	<sys/ipc.h>
+	<string.h>
+	<errno.h>
+	<sys/shm.h>
+	<thread>
+	<chrono>
+
