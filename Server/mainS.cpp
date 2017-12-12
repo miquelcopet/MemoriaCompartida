@@ -34,29 +34,45 @@ string to_String(int i)
     return ss.str();
 }
 
+int crearSegmento (int id_memoria, int key, int BUFFER_SIZE) {
+    #ifdef OS_WINDOWS
+
+    #else
+        id_memoria = shmget(key, BUFFER_SIZE, 0777 | IPC_CREAT);
+        if (id_memoria == 1) {
+              cout << "ERROR: Segmento de memoria" << endl;
+        }
+
+    #endif
+    return id_memoria;
+}
+
+void * mapearMemoria (void* pBuf, int id_memoria) {
+    #ifdef OS_WINDOWS
+
+    #else
+        pBuf = shmat (id_memoria, (char *)0, 0);
+        if (pBuf == NULL) {
+            cout << "ERROR: Reservar la memoria" << endl;
+        }
+    #endif
+    return pBuf;
+}
 
 int main() {
 
     //Creamos una clave para identificar el espacio de memória
     int key = 7680;
     int BUFFER_SIZE = sizeof(Mensaje) * 2;
+    int id_memoria = 0;
+    void * pBuf;
     string message="";
 
     //Creamos el segmento de memória
-    int id_memoria = 0;
-    id_memoria = shmget(key, BUFFER_SIZE, 0777 | IPC_CREAT);
-    if (id_memoria == 1) {
-          cout << "ERROR: Segmento de memoria" << endl;
-          return 1;
-    }
+    id_memoria = crearSegmento(id_memoria, key, BUFFER_SIZE);
 
-    //Se declara el espacio a compartir
-    void *pBuf;
-       pBuf = shmat (id_memoria, (char *)0, 0);
-       if (pBuf == NULL) {
-          cout << "ERROR: Reservar la memoria" << endl;
-          return 1;
-       }
+    //Se mapea la memoria
+    pBuf = mapearMemoria(pBuf, id_memoria);
 
     cout << ".:SERVIDOR:." << endl;
     cout << "Introduzca q y apriete ENTER para salir del programa" << endl;
