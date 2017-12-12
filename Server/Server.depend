@@ -14,3 +14,18 @@
 	<stdio.h>
 	<stdio.h>
 
+1513028254 source:d:\miquel-msi\documentos\github\memoriacompartida\server\mains.cpp
+	<string.h>
+	<sstream>
+	<thread>
+	<chrono>
+	<iostream>
+	<windows.h>
+	<tchar.h>
+	<iostream>
+	<cstdlib>
+	<sys/ipc.h>
+	<sys/shm.h>
+	<stdio.h>
+	<stdio.h>
+
