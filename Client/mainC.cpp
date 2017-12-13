@@ -1,13 +1,23 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <iostream>
-#include <sys/ipc.h>
 #include <string.h>
-#include <errno.h>
-#include <sys/shm.h>
-
+#include <sstream>
 #include <thread>
 #include <chrono>
+#include <iostream>
+
+#ifdef OS_WINDOWS
+    #include <windows.h>
+    #include <tchar.h>
+    #include <iostream>
+    #include <cstdlib>
+
+#else
+
+    #include <sys/ipc.h>
+    #include <sys/shm.h>
+    #include <stdio.h>
+    #include <stdio.h>
+
+#endif
 
 using namespace std;
 
@@ -17,32 +27,97 @@ struct Mensaje {
     char message[256];
 };
 
+string to_String(int i)
+{
+    stringstream ss;
+    ss << i;
+    return ss.str();
+}
+
+#ifdef OS_WINDOWS
+
+#else
+	int crearSegmento (int id_memoria, int key, int BUFFER_SIZE) {
+    #ifdef OS_WINDOWS
+
+    #else
+        id_memoria = shmget(key, BUFFER_SIZE, 0777 | IPC_CREAT);
+        if (id_memoria == 1) {
+              cout << "ERROR: Segmento de memoria" << endl;
+        }
+
+    #endif
+    return id_memoria;
+	}
+
+	void * mapearMemoria (void* pBuf, int id_memoria) {
+		#ifdef OS_WINDOWS
+
+		#else
+			pBuf = shmat (id_memoria, (char *)0, 0);
+			if (pBuf == NULL) {
+				cout << "ERROR: Reservar la memoria" << endl;
+			}
+		#endif
+		return pBuf;
+	}
+#endif
 int main () {
+	
+	#ifdef OS_WINDOWS
+		int BUF_SIZE = sizeof(Message) * 2;
 
-    int key = 7680;
-    int BUFFER_SIZE = sizeof(Mensaje) * 2;
+		string sharedName = "Global\\MyFileMappingObject";
 
-    //Se crea la memoria
-    int id_memoria = 0;
-    id_memoria = shmget(key, BUFFER_SIZE, 0777 | IPC_CREAT);
-    if (id_memoria == 1) {
-          fprintf (stderr, "Error con el segmento de memoria");
-          return 1;
-    }
+		HANDLE hMapFile;
 
-    //Se de fine el bufeferrerere
-    void *pBuf;
-       pBuf = shmat (id_memoria, (char *)0, 0);
-       if (pBuf == NULL) {
-          fprintf (stderr, "Error al reservar al memroria");
-          return 1;
-       }
+		hMapFile = OpenFileMapping(
+					   FILE_MAP_ALL_ACCESS,   // read/write access
+					   FALSE,                 // do not inherit the name
+					   sharedName.c_str());   // name of mapping object
+
+		if (hMapFile == NULL) {
+		cout << "Could not open file mapping object (" << GetLastError() << ").\n";
+		return 1;
+		} // end if
+
+		char *pBuf = (char *) MapViewOfFile(hMapFile,    // handle to map object
+						   FILE_MAP_ALL_ACCESS,  // read/write permission
+						   0,
+						   0,
+						   BUF_SIZE);
+
+		if (pBuf == NULL)
+		{
+		cout << "Could not map view of file (" << GetLastError() << ").\n";
+		CloseHandle(hMapFile);
+		return 1;
+		} // end if
+	#else
+	    //Creamos una clave para identificar el espacio de memória
+		int key = 7680;
+		int BUFFER_SIZE = sizeof(Mensaje) * 2;
+		int id_memoria = 0;
+		void * pBuf;
+		string message="";	
+	
+		//Creamos el segmento de memória
+		id_memoria = crearSegmento(id_memoria, key, BUFFER_SIZE);
+
+		//Se mapea la memoria
+		pBuf = mapearMemoria(pBuf, id_memoria);
+	#endif
 
     cout << ".:CLIENTE:." << endl;
+	cout << "Introduzca q y apriete ENTER para salir del programa" << endl;
 
     Mensaje const *messageServer = (Mensaje *) pBuf;
     Mensaje *messageClient = ((Mensaje *) pBuf) + 1;
 
+	bool salir = false;
+    string choice;
+    cin >> choice;
+	
     do {
     ///Recoge el mensaje del servidor
     if (messageServer->id > messageClient->ack) {
@@ -56,12 +131,21 @@ int main () {
         cout << "No hay ningun mensaje nuevo." << endl;
     } // end if
 
+	if (choice == "q") {
+        salir=true;
+        break;
+    }
+	
     this_thread::sleep_for (chrono::seconds(1));
 
-    } while (1);
+    } while (salir == false);
 
-    shmdt ((char *)pBuf);
-    shmctl (id_memoria, IPC_RMID, (struct shmid_ds *)NULL);
+    #ifdef OS_WINDOWS
+		CloseHandle (hMapFile);
+	#else
+		shmdt((char *)pBuf);
+		shmctl (id_memoria, IPC_RMID, (struct shmid_ds *)NULL);
+	#endif
 
     return 0;
 }
