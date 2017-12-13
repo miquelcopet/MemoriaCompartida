@@ -4,7 +4,7 @@
 #include <chrono>
 #include <iostream>
 
-#ifdef OS_WINDOWS
+#ifdef _WIN32
     #include <windows.h>
     #include <tchar.h>
     #include <iostream>
@@ -34,11 +34,11 @@ string to_String(int i)
     return ss.str();
 }
 
-#ifdef OS_WINDOWS
+#ifdef _WIN32
 
 #else
 	int crearSegmento (int id_memoria, int key, int BUFFER_SIZE) {
-    #ifdef OS_WINDOWS
+    #ifdef _WIN32
 
     #else
         id_memoria = shmget(key, BUFFER_SIZE, 0777 | IPC_CREAT);
@@ -51,7 +51,7 @@ string to_String(int i)
 	}
 
 	void * mapearMemoria (void* pBuf, int id_memoria) {
-		#ifdef OS_WINDOWS
+		#ifdef _WIN32
 
 		#else
 			pBuf = shmat (id_memoria, (char *)0, 0);
@@ -66,7 +66,7 @@ string to_String(int i)
 
 int main() {
 	
-	#ifdef OS_WINDOWS
+	#ifdef _WIN32
 		string sharedName = "Global\\MyFileMappingObject";
 		string message = "";
 		HANDLE hMapFile;
@@ -145,12 +145,16 @@ int main() {
         salir=true;
         break;
     }
-
-	this_thread::sleep_for (chrono::seconds(3));
+	
+	#ifdef _WIN32
+		Sleep(3000);
+	#else
+		this_thread::sleep_for (chrono::seconds(3));
+	#endif
 
     } while(salir == false);
 
-	#ifdef OS_WINDOWS
+	#ifdef _WIN32
 		CloseHandle (hMapFile);
 	#else
 		shmdt((char *)pBuf);
